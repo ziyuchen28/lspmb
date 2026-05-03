@@ -14,7 +14,7 @@
 #include <cerrno>
 #include <cstring>
 
-namespace clspc::service {
+namespace lspmb::service {
 
 
 using namespace lspx::protocol;
@@ -84,24 +84,6 @@ SessionEntry create_session_entry(
     SessionOptions session_options =
         make_session_options(launch, trace_lsp_messages, trace_request_timing);
 
-    // service_trace_line(trace, "spawn begin");
-    // auto child = spawn(launch, current_platform());
-    // // service_trace_line(trace, "spawn done");
-    // service_trace_line(trace,
-    //                    "spawn done pid=" +
-    //                    std::to_string(child.process().pid()));
-    //
-    // service_trace_line(trace, "stderr drainer begin");
-    // auto stderr_drainer =
-    //     std::make_unique<StderrDrainer>(child.stderr_read_fd(), stderr_sink_path());
-    // service_trace_line(trace, "stderr drainer ready");
-
-    // SessionOptions session_options;
-    // session_options.root_dir = launch.root_dir;
-    // session_options.trace_lsp_messages = trace_lsp_messages;
-    // session_options.trace_request_timing = trace_request_timing;
-
-    // auto session = std::make_unique<Session>(std::move(child), session_options);
 
     service_trace_line(trace, "session spawn begin");
     StdioJsonRpcLaunchConfig cfg = to_ipc_launch_config(launch);
@@ -124,130 +106,6 @@ SessionEntry create_session_entry(
     entry.session = std::move(session);
     return entry;
 }
-
-// void best_effort_shutdown(SessionEntry &entry) noexcept
-// {
-//     if (entry.session) {
-//         try {
-//             entry.session->shutdown_and_exit();
-//         } catch (...) {}
-//
-//         // Intentionally do not block in wait() here.
-//         entry.session.reset();
-//     }
-//     // entry.stderr_drainer.reset();
-// }
-
-// void shutdown_graceful(Session &session, bool trace) noexcept
-// {
-//     try {
-//         service_trace_line(trace, "shutdown_and_exit begin");
-//         session.shutdown_and_exit();
-//         service_trace_line(trace, "shutdown_and_exit done");
-//     } catch (const std::exception& ex) {
-//         service_trace_line(trace, std::string("shutdown_and_exit failed: ") + ex.what());
-//     } catch (...) {
-//         service_trace_line(trace, "shutdown_and_exit failed: unknown exception");
-//     }
-//
-//     try {
-//         service_trace_line(trace, "wait_for graceful begin");
-//         if (session.wait_for(std::chrono::seconds(1))) {
-//             service_trace_line(trace, "wait_for graceful done");
-//             return;
-//         }
-//         service_trace_line(trace, "wait_for graceful timed out");
-//     } catch (const std::exception& ex) {
-//         service_trace_line(trace, std::string("wait_for graceful failed: ") + ex.what());
-//     } catch (...) {
-//         service_trace_line(trace, "wait_for graceful failed: unknown exception");
-//     }
-//
-//     try {
-//         service_trace_line(trace, "SIGTERM begin");
-//         session.terminate();
-//         service_trace_line(trace, "SIGTERM sent");
-//     } catch (const std::exception& ex) {
-//         service_trace_line(trace, std::string("SIGTERM failed: ") + ex.what());
-//     } catch (...) {
-//         service_trace_line(trace, "SIGTERM failed: unknown exception");
-//     }
-//
-//     try {
-//         service_trace_line(trace, "wait_for SIGTERM begin");
-//         if (session.wait_for(std::chrono::seconds(1))) {
-//             service_trace_line(trace, "wait_for SIGTERM done");
-//             return;
-//         }
-//         service_trace_line(trace, "wait_for SIGTERM timed out");
-//     } catch (const std::exception& ex) {
-//         service_trace_line(trace,
-//             std::string("wait_for SIGTERM failed: ") + ex.what());
-//     } catch (...) {
-//         service_trace_line(trace, "wait_for SIGTERM failed: unknown exception");
-//     }
-//
-//     try {
-//         service_trace_line(trace, "SIGKILL begin");
-//         session.kill();
-//         service_trace_line(trace, "SIGKILL sent");
-//     } catch (const std::exception& ex) {
-//         service_trace_line(trace,
-//             std::string("SIGKILL failed: ") + ex.what());
-//     } catch (...) {
-//         service_trace_line(trace, "SIGKILL failed: unknown exception");
-//     }
-//
-//     try {
-//         service_trace_line(trace, "wait_for SIGKILL begin");
-//         if (session.wait_for(std::chrono::seconds(2))) {
-//             service_trace_line(trace, "wait_for SIGKILL done");
-//             return;
-//         }
-//         service_trace_line(trace, "wait_for SIGKILL timed out");
-//     } catch (const std::exception& ex) {
-//         service_trace_line(trace, std::string("wait_for SIGKILL failed: ") + ex.what());
-//     } catch (...) {
-//         service_trace_line(trace, "wait_for SIGKILL failed: unknown exception");
-//     }
-// } 
-//
-
-// void shutdown_and_wait_bounded(clspc::Session &session, bool trace)
-// {
-//     try {
-//         service_trace_line(trace, "shutdown_and_exit begin");
-//         session.shutdown_and_exit();
-//         service_trace_line(trace, "shutdown_and_exit done");
-//     } catch (const std::exception& ex) {
-//         service_trace_line(trace, std::string("shutdown_and_exit failed: ") + ex.what());
-//     } catch (...) {
-//         service_trace_line(trace, "shutdown_and_exit failed: unknown exception");
-//     }
-//
-//     try {
-//         service_trace_line(trace, "wait_for graceful begin");
-//         if (session.wait_for(std::chrono::seconds(5))) {
-//             service_trace_line(trace, "wait_for graceful done");
-//             return;
-//         }
-//         service_trace_line(trace, "wait_for graceful timed out; terminating");
-//     } catch (...) {
-//         service_trace_line(trace, "wait_for graceful failed");
-//     }
-//
-//     try {
-//         session.terminate();
-//     } catch (...) {
-//         service_trace_line(trace, "terminate failed");
-//     }
-//
-//     try {
-//         (void)session.wait_for(std::chrono::seconds(2));
-//     } catch (...) {
-//         service_trace_line(trace, "wait_for terminate failed");
-//     }
-// }
 
 void best_effort_shutdown(SessionEntry &entry) noexcept
 {
@@ -632,30 +490,6 @@ ExpandCallsResponse LiveSession::expand_calls(const ExpandCallsRequest &req)
     resp.direction = req.direction;
     resp.resolved_anchor = anchor;
 
-    // if (req.direction == "outgoing" || req.direction == "both") {
-    //     const ExpansionResult expansion = expand_outgoing_from_method(
-    //         *entry.session,
-    //         resolved.file,
-    //         req.method_name,
-    //         expand_options);
-    //     ExpandedCallTree tree;
-    //     tree.root = expansion.root;
-    //     tree.snippets = collect_unique_snippets(tree.root);
-    //     out.outgoing = std::move(tree);
-    // }
-    //
-    // if (req.direction == "incoming" || req.direction == "both") {
-    //     const ExpansionResult expansion = expand_incoming_to_method(
-    //         *entry.session,
-    //         resolved.file,
-    //         req.method_name,
-    //         expand_options);
-    //
-    //     ExpandedCallTree tree;
-    //     tree.root = expansion.root;
-    //     tree.snippets = collect_unique_snippets(tree.root);
-    //     out.incoming = std::move(tree);
-    // }
 
     if (req.direction == "outgoing" || req.direction == "both") {
         auto result = lspx::graph::expand_outgoing_from_function(
@@ -692,6 +526,6 @@ ExpandCallsResponse LiveSession::expand_calls(const ExpandCallsRequest &req)
 }
 
 
-}  // namespace clspc::service
+}  // namespace lspmb::service
 
 

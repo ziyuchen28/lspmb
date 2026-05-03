@@ -1,4 +1,5 @@
 BUILD_DIR := build
+TOOLS_DIR := .tools
 
 -include .env
 
@@ -29,15 +30,41 @@ build: config
 	cmake --build $(BUILD_DIR) -j -- --no-print-directory
 
 
+install-mermaid:
+	@echo "==> Installing Mermaid CLI sandbox..."
+	@if ! command -v npm >/dev/null 2>&1; then \
+		echo "ERROR: 'npm' is not installed."; \
+		echo "Mermaid CLI requires Node.js. Please install it via your system package manager:"; \
+		echo "  macOS: brew install node"; \
+		echo "  Linux: sudo apt install nodejs npm"; \
+		exit 1; \
+	fi
+	@mkdir -p $(TOOLS_DIR)
+	@if [ ! -x "$(TOOLS_DIR)/node_modules/.bin/mmdc" ]; then \
+		echo "Installing @mermaid-js/mermaid-cli locally..."; \
+		cd $(TOOLS_DIR) && npm install @mermaid-js/mermaid-cli > /dev/null 2>&1; \
+		echo "==> Mermaid CLI successfully installed to: ./$(TOOLS_DIR)/node_modules/.bin/mmdc"; \
+	else \
+		echo "==> Mermaid CLI is already installed."; \
+	fi
+
+
 clean:
 	@echo "==> Cleaning up bin..."
-	rm -rf $(BUILD_DIR)
+	@rm -rf $(BUILD_DIR)
+	@echo "==> Bin removed..."
 
+clean-dep:
+	@echo "==> Cleaning up dep..."
+	@rm -rf external/
+	@echo "==> Dep removed..."
 
-clean-all:
-	@echo "==> Cleaning up bin and dep..."
-	rm -rf $(BUILD_DIR)
-	rm -rf external/
+clean-tools:
+	@echo "==> Cleaning up tools..."
+	@rm -rf $(TOOLS_DIR)
+	@echo "==> All local tools removed."
+
+clean-all: clean clean-dep clean-tools
 
 
 de-git:

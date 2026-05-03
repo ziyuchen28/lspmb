@@ -9,11 +9,12 @@
 #include <unordered_map>
 #include <unordered_set>
 
-namespace clspc::report {
+namespace lspmb::report {
 
 using namespace lspx::protocol;
 using namespace lspx::graph;
 using namespace lspx::snippet;
+using namespace lspmb::service;
 
 namespace {
 
@@ -283,7 +284,7 @@ void append_snippets(std::ostream &os,
 
 void append_branch(std::ostream &os,
                    const char *title,
-                   const std::optional<clspc::service::ExpandedCallTree> &branch,
+                   const std::optional<lspmb::service::ExpandedCallTree> &branch,
                    const std::filesystem::path &root)
 {
     os << "## " << title << "\n\n";
@@ -321,8 +322,8 @@ std::string default_svg_file_name(const std::string &class_name,
 }
 
 std::string render_expand_calls_mermaid(
-    const clspc::service::ExpandCallsRequest &req,
-    const clspc::service::ExpandCallsResponse &resp,
+    const ExpandCallsRequest &req,
+    const ExpandCallsResponse &resp,
     const ExpandReportOptions &options)
 {
     const std::filesystem::path root =
@@ -382,8 +383,8 @@ std::string default_report_file_name(const std::string &class_name,
 }
 
 std::string render_expand_calls_markdown(
-    const clspc::service::ExpandCallsRequest &req,
-    const clspc::service::ExpandCallsResponse &resp,
+    const ExpandCallsRequest &req,
+    const ExpandCallsResponse &resp,
     const ExpandReportOptions &options)
 {
     const std::filesystem::path root =
@@ -425,6 +426,6 @@ std::string render_expand_calls_markdown(
     return os.str();
 }
 
-}  // namespace clspc::report
+}  // namespace lspmb::report
 
 

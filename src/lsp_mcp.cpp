@@ -37,6 +37,8 @@ using namespace lspx::protocol;
 using namespace lspx::graph;
 using namespace lspx::snippet;
 using namespace lspx::driver::jdtls;
+using namespace lspmb::service;
+using namespace lspmb::report;
 
 namespace {
 
@@ -196,21 +198,21 @@ void write_text_file(const std::filesystem::path &path,
 }
 
 std::size_t branch_snippet_count(
-    const std::optional<clspc::service::ExpandedCallTree> &branch)
+    const std::optional<ExpandedCallTree> &branch)
 {
     return branch.has_value() ? branch->snippets.size() : 0;
 }
 
 std::size_t branch_top_level_count(
-    const std::optional<clspc::service::ExpandedCallTree> &branch)
+    const std::optional<ExpandedCallTree> &branch)
 {
     return branch.has_value() ? branch->root.children.size() : 0;
 }
 
 
-clspc::service::LiveSession &live_session()
+LiveSession &live_session()
 {
-    static clspc::service::LiveSession s;
+    static LiveSession s;
     return s;
 }
 
@@ -248,7 +250,7 @@ std::optional<std::string> getenv_nonempty(std::string_view name)
 
 void maybe_redirect_stderr_to_log_file()
 {
-    const std::optional<std::string> path = getenv_nonempty("CLSPC_LOG_FILE");
+    const std::optional<std::string> path = getenv_nonempty("LSP_LOG_FILE");
     if (!path.has_value()) {
         return;
     }
@@ -256,20 +258,20 @@ void maybe_redirect_stderr_to_log_file()
     const int fd = ::open(path->c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
     if (fd < 0) {
         throw std::runtime_error(
-            "failed to open CLSPC_LOG_FILE '" + *path + "': " + std::strerror(errno));
+            "failed to open LSP_LOG_FILE '" + *path + "': " + std::strerror(errno));
     }
 
     if (::dup2(fd, STDERR_FILENO) < 0) {
         const std::string err = std::strerror(errno);
         ::close(fd);
         throw std::runtime_error(
-            "failed to redirect stderr to CLSPC_LOG_FILE '" + *path + "': " + err);
+            "failed to redirect stderr to LSP_LOG_FILE '" + *path + "': " + err);
     }
 
     ::close(fd);
 
     std::cerr.setf(std::ios::unitbuf);
-    std::cerr << "[clspc_mcp_smoke] stderr redirected to " << *path << "\n";
+    std::cerr << "[lsp_mcp] stderr redirected to " << *path << "\n";
 }
 
 
@@ -314,12 +316,12 @@ LaunchOptions parse_launch_arguments(const json &arguments)
     launch.jdtls_home =
         arguments.contains("jdtlsHome") && arguments.at("jdtlsHome").is_string()
             ? std::filesystem::absolute(arguments.at("jdtlsHome").get<std::string>()).lexically_normal()
-            : std::filesystem::absolute(getenv_required("CLSPC_JDTLS_HOME")).lexically_normal();
+            : std::filesystem::absolute(getenv_required("LSP_JDTLS_HOME")).lexically_normal();
 
     launch.java_bin =
         arguments.contains("javaBin") && arguments.at("javaBin").is_string()
             ? arguments.at("javaBin").get<std::string>()
-            : getenv_or("CLSPC_JAVA_BIN", "java");
+            : getenv_or("LSP_JAVA_BIN", "java");
 
     launch.log_protocol = false;
     launch.log_level = "INFO";
@@ -377,7 +379,7 @@ json initialize_result_json(const InitializeResult &r)
     };
 }
 
-json initialize_probe_response_json(const clspc::service::InitializeProbeResponse &r,
+json initialize_probe_response_json(const InitializeProbeResponse &r,
                                     const LaunchOptions &launch)
 {
     return json{
@@ -407,7 +409,7 @@ json document_symbol_json(const DocumentSymbol &symbol)
     };
 }
 
-json document_symbols_response_json(const clspc::service::DocumentSymbolsResponse &r)
+json document_symbols_response_json(const DocumentSymbolsResponse &r)
 {
     json symbols = json::array();
     for (const DocumentSymbol &symbol : r.symbols) {
@@ -465,7 +467,7 @@ json call_hierarchy_item_json(const CallHierarchyItem &item)
 }
 
 
-json resolve_anchor_response_json(const clspc::service::ResolveAnchorResponse &resp)
+json resolve_anchor_response_json(const ResolveAnchorResponse &resp)
 {
     const ResolvedAnchor &anchor = resp.anchor;
 
@@ -545,7 +547,7 @@ json expanded_snippet_json(const CallGraphSnippet &snippet)
     };
 }
 
-json expanded_call_tree_json(const clspc::service::ExpandedCallTree &tree)
+json expanded_call_tree_json(const ExpandedCallTree &tree)
 {
     json snippets = json::array();
     for (const CallGraphSnippet &snippet : tree.snippets) {
@@ -560,7 +562,7 @@ json expanded_call_tree_json(const clspc::service::ExpandedCallTree &tree)
 }
 
 
-json expand_calls_response_json(const clspc::service::ExpandCallsResponse &resp)
+json expand_calls_response_json(const ExpandCallsResponse &resp)
 {
     json out{
         {"ok", true},
@@ -582,7 +584,7 @@ json expand_calls_response_json(const clspc::service::ExpandCallsResponse &resp)
 
 bool trace_enabled() 
 {
-    const char *env = std::getenv("CLSPC_MCP_TRACE");
+    const char *env = std::getenv("LSP_MCP_TRACE");
     if (!env) return false;
     const std::string v(env);
     return !v.empty() && v != "0" && v != "false" && v != "FALSE";
@@ -591,7 +593,7 @@ bool trace_enabled()
 void log_line(std::string_view msg) 
 {
     if (!trace_enabled()) return;
-    std::cerr << "[clspc_mcp_smoke] " << msg << "\n";
+    std::cerr << "[lsp_mcp] " << msg << "\n";
     std::cerr.flush();
 }
 
@@ -730,7 +732,7 @@ MermaidRenderResult maybe_render_mermaid_svg(const json &arguments,
     }
 
     const std::string renderer =
-        getenv_or("CLSPC_MMDC_BIN", "mmdc");
+        getenv_or("LSP_MMDC_BIN", "mmdc");
 
     result.attempted = true;
     result.renderer = renderer;
@@ -744,7 +746,7 @@ MermaidRenderResult maybe_render_mermaid_svg(const json &arguments,
         };
 
         if (const std::optional<std::string> config =
-                getenv_nonempty("CLSPC_MMDC_CONFIG"); config.has_value()) {
+                getenv_nonempty("LSP_MMDC_CONFIG"); config.has_value()) {
             argv.push_back("--configFile");
             argv.push_back(*config);
         }
@@ -781,7 +783,7 @@ MermaidRenderResult render_mermaid_svg(
     }
 
     const std::string renderer =
-        getenv_or("CLSPC_MMDC_BIN", "mmdc");
+        getenv_or("LSP_MMDC_BIN", "mmdc");
 
     const int devnull_in = ::open("/dev/null", O_RDONLY);
     if (devnull_in < 0) {
@@ -795,13 +797,13 @@ MermaidRenderResult render_mermaid_svg(
     }
 
     const std::string render_log =
-        getenv_or("CLSPC_MMDC_LOG_FILE", "/tmp/clspc-mmdc.log");
+        getenv_or("LSP_MMDC_LOG_FILE", "/tmp/lsp-mmdc.log");
 
     const int err_fd = ::open(render_log.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
     if (err_fd < 0) {
         ::close(devnull_in);
         ::close(devnull_out);
-        throw std::runtime_error("open(CLSPC_MMDC_LOG_FILE) failed");
+        throw std::runtime_error("open(LSP_MMDC_LOG_FILE) failed");
     }
 
     try {
@@ -903,11 +905,11 @@ MermaidRenderResult render_mermaid_svg(
 //                 }},
 //                 {"jdtlsHome", {
 //                     {"type", "string"},
-//                     {"description", "Optional JDTLS install dir. Defaults to CLSPC_JDTLS_HOME."}
+//                     {"description", "Optional JDTLS install dir. Defaults to LSP_JDTLS_HOME."}
 //                 }},
 //                 {"javaBin", {
 //                     {"type", "string"},
-//                     {"description", "Optional java executable. Defaults to CLSPC_JAVA_BIN or 'java'."}
+//                     {"description", "Optional java executable. Defaults to LSP_JAVA_BIN or 'java'."}
 //                 }}
 //             }},
 //             {"required", json::array({"root", "workspaceDir"})}
@@ -939,11 +941,11 @@ MermaidRenderResult render_mermaid_svg(
 //                 }},
 //                 {"jdtlsHome", {
 //                     {"type", "string"},
-//                     {"description", "Optional JDTLS install dir. Defaults to CLSPC_JDTLS_HOME."}
+//                     {"description", "Optional JDTLS install dir. Defaults to LSP_JDTLS_HOME."}
 //                 }},
 //                 {"javaBin", {
 //                     {"type", "string"},
-//                     {"description", "Optional java executable. Defaults to CLSPC_JAVA_BIN or 'java'."}
+//                     {"description", "Optional java executable. Defaults to LSP_JAVA_BIN or 'java'."}
 //                 }}
 //             }},
 //             {"required", json::array({"root", "workspaceDir", "file"})}
@@ -979,11 +981,11 @@ MermaidRenderResult render_mermaid_svg(
 //                 }},
 //                 {"jdtlsHome", {
 //                     {"type", "string"},
-//                     {"description", "Optional JDTLS install dir. Defaults to CLSPC_JDTLS_HOME."}
+//                     {"description", "Optional JDTLS install dir. Defaults to LSP_JDTLS_HOME."}
 //                 }},
 //                 {"javaBin", {
 //                     {"type", "string"},
-//                     {"description", "Optional java executable. Defaults to CLSPC_JAVA_BIN or 'java'."}
+//                     {"description", "Optional java executable. Defaults to LSP_JAVA_BIN or 'java'."}
 //                 }}
 //             }},
 //             {"required", json::array({"root", "workspaceDir", "class", "method"})}
@@ -1040,11 +1042,11 @@ MermaidRenderResult render_mermaid_svg(
 //                 }},
 //                 {"jdtlsHome", {
 //                     {"type", "string"},
-//                     {"description", "Optional JDTLS install dir. Defaults to CLSPC_JDTLS_HOME."}
+//                     {"description", "Optional JDTLS install dir. Defaults to LSP_JDTLS_HOME."}
 //                 }},
 //                 {"javaBin", {
 //                     {"type", "string"},
-//                     {"description", "Optional java executable. Defaults to CLSPC_JAVA_BIN or 'java'."}
+//                     {"description", "Optional java executable. Defaults to LSP_JAVA_BIN or 'java'."}
 //                 }}
 //             }},
 //             {"required", json::array({"root", "workspaceDir", "class", "method"})}
@@ -1122,11 +1124,11 @@ json jdtls_expand_report_tool_definition()
                 }},
                 {"jdtlsHome", {
                     {"type", "string"},
-                    {"description", "Optional JDTLS install dir. Defaults to CLSPC_JDTLS_HOME."}
+                    {"description", "Optional JDTLS install dir. Defaults to LSP_JDTLS_HOME."}
                 }},
                 {"javaBin", {
                     {"type", "string"},
-                    {"description", "Optional java executable. Defaults to CLSPC_JAVA_BIN or 'java'."}
+                    {"description", "Optional java executable. Defaults to LSP_JAVA_BIN or 'java'."}
                 }}
             }},
             {"required", json::array({"root", "workspaceDir", "class", "method"})}
@@ -1175,13 +1177,13 @@ json jdtls_initialize_probe_result(const json &arguments)
         throw std::runtime_error("arguments must be an object");
     }
 
-    clspc::service::InitializeProbeRequest req;
+    InitializeProbeRequest req;
     req.launch = parse_launch_arguments(arguments);
     req.trace_lsp_messages = false;
     req.trace_request_timing = false;
 
-    const clspc::service::InitializeProbeResponse resp =
-        clspc::service::run_initialize_probe(req);
+    const InitializeProbeResponse resp =
+        run_initialize_probe(req);
 
     const json structured = initialize_probe_response_json(resp, req.launch);
 
@@ -1203,16 +1205,16 @@ json jdtls_document_symbols_result(const json &arguments)
         throw std::runtime_error("arguments must be an object");
     }
 
-    clspc::service::DocumentSymbolsRequest req;
+    DocumentSymbolsRequest req;
     req.launch = parse_launch_arguments(arguments);
     req.file = parse_required_abs_path(arguments, "file");
-    req.trace_lsp_messages = env_flag_enabled("CLSPC_TRACE_LSP");
-    req.trace_request_timing = env_flag_enabled("CLSPC_TRACE_RPC");
+    req.trace_lsp_messages = env_flag_enabled("LSP_TRACE_LSP");
+    req.trace_request_timing = env_flag_enabled("LSP_TRACE_RPC");
 
     log_line("jdtls_document_symbols service begin");
 
-    const clspc::service::DocumentSymbolsResponse resp =
-        clspc::service::run_document_symbols(req);
+    const DocumentSymbolsResponse resp =
+        run_document_symbols(req);
 
     log_line("jdtls_document_symbols service returned");
 
@@ -1252,7 +1254,7 @@ json initialize_result(const json &params)
             {"tools", json::object()}
         }},
         {"serverInfo", {
-            {"name", "clspc-mcp-smoke"},
+            {"name", "lsp-mcp"},
             {"version", "0.1.0"}
         }},
         {"instructions", "Use smoke_echo for simple end-to-end MCP verification."}
@@ -1266,21 +1268,21 @@ json jdtls_resolve_anchor_result(const json &arguments)
         throw std::runtime_error("arguments must be an object");
     }
 
-    clspc::service::ResolveAnchorRequest req;
+    ResolveAnchorRequest req;
     req.launch = parse_launch_arguments(arguments);
     req.class_name = parse_required_string(arguments, "class");
     req.method_name = parse_required_string(arguments, "method");
-    req.trace_lsp_messages = env_flag_enabled("CLSPC_TRACE_LSP");
-    req.trace_request_timing = env_flag_enabled("CLSPC_TRACE_RPC");
+    req.trace_lsp_messages = env_flag_enabled("LSP_TRACE_LSP");
+    req.trace_request_timing = env_flag_enabled("LSP_TRACE_RPC");
 
     log_line("jdtls_resolve_anchor service begin"
              " class=" + req.class_name +
              " method=" + req.method_name);
 
-    // const clspc::service::ResolveAnchorResponse resp =
-    //     clspc::service::run_resolve_anchor(req);
+    // const ResolveAnchorResponse resp =
+    //     run_resolve_anchor(req);
 
-    const clspc::service::ResolveAnchorResponse resp =
+    const ResolveAnchorResponse resp =
         live_session().resolve_anchor(req);
 
     log_line("jdtls_resolve_anchor service returned"
@@ -1309,7 +1311,7 @@ json jdtls_expand_calls_result(const json &arguments)
         throw std::runtime_error("arguments must be an object");
     }
 
-    clspc::service::ExpandCallsRequest req;
+    ExpandCallsRequest req;
     req.launch = parse_launch_arguments(arguments);
     req.class_name = parse_required_string(arguments, "class");
     req.method_name = parse_required_string(arguments, "method");
@@ -1319,15 +1321,15 @@ json jdtls_expand_calls_result(const json &arguments)
         static_cast<std::size_t>(arguments.value("snippetPaddingBefore", 1));
     req.snippet_padding_after =
         static_cast<std::size_t>(arguments.value("snippetPaddingAfter", 1));
-    req.trace_lsp_messages = env_flag_enabled("CLSPC_TRACE_LSP");
-    req.trace_request_timing = env_flag_enabled("CLSPC_TRACE_RPC");
+    req.trace_lsp_messages = env_flag_enabled("LSP_TRACE_LSP");
+    req.trace_request_timing = env_flag_enabled("LSP_TRACE_RPC");
 
     log_line("jdtls_expand_calls service begin"
              " class=" + req.class_name +
              " method=" + req.method_name +
              " direction=" + req.direction);
 
-    const clspc::service::ExpandCallsResponse resp =
+    const ExpandCallsResponse resp =
         live_session().expand_calls(req);
 
     log_line("jdtls_expand_calls service returned"
@@ -1356,7 +1358,7 @@ json jdtls_expand_calls_result(const json &arguments)
 //         throw std::runtime_error("arguments must be an object");
 //     }
 //
-//     clspc::service::ExpandCallsRequest req;
+//     ExpandCallsRequest req;
 //     req.launch = parse_launch_arguments(arguments);
 //     req.class_name = parse_required_string(arguments, "class");
 //     req.class_name = extract_class_name(req.class_name);
@@ -1368,8 +1370,8 @@ json jdtls_expand_calls_result(const json &arguments)
 //         static_cast<std::size_t>(arguments.value("snippetPaddingBefore", 2));
 //     req.snippet_padding_after =
 //         static_cast<std::size_t>(arguments.value("snippetPaddingAfter", 3));
-//     req.trace_lsp_messages = env_flag_enabled("CLSPC_TRACE_LSP");
-//     req.trace_request_timing = env_flag_enabled("CLSPC_TRACE_RPC");
+//     req.trace_lsp_messages = env_flag_enabled("LSP_TRACE_LSP");
+//     req.trace_request_timing = env_flag_enabled("LSP_TRACE_RPC");
 //
 //     const std::filesystem::path report_path = normalize_output_path(
 //         req.launch.root_dir,
@@ -1388,15 +1390,15 @@ json jdtls_expand_calls_result(const json &arguments)
 //              " direction=" + req.direction +
 //              " reportPath=" + report_path.string());
 //
-//     const clspc::service::ExpandCallsResponse resp =
+//     const ExpandCallsResponse resp =
 //         live_session().expand_calls(req);
 //
-//     clspc::report::ExpandReportOptions report_options;
+//     ExpandReportOptions report_options;
 //     report_options.root_dir = req.launch.root_dir;
 //     report_options.user_request = user_request;
 //
 //     const std::string markdown =
-//         clspc::report::render_expand_calls_markdown(req, resp, report_options);
+//         render_expand_calls_markdown(req, resp, report_options);
 //
 //     write_text_file(report_path, markdown);
 //
@@ -1434,7 +1436,7 @@ json jdtls_expand_report_result(const json &arguments)
         throw std::runtime_error("arguments must be an object");
     }
 
-    clspc::service::ExpandCallsRequest req;
+    ExpandCallsRequest req;
     req.launch = parse_launch_arguments(arguments);
     req.class_name = parse_required_string(arguments, "class");
     req.class_name = extract_class_name(req.class_name);
@@ -1445,8 +1447,8 @@ json jdtls_expand_report_result(const json &arguments)
         static_cast<std::size_t>(arguments.value("snippetPaddingBefore", 2));
     req.snippet_padding_after =
         static_cast<std::size_t>(arguments.value("snippetPaddingAfter", 3));
-    req.trace_lsp_messages = env_flag_enabled("CLSPC_TRACE_LSP");
-    req.trace_request_timing = env_flag_enabled("CLSPC_TRACE_RPC");
+    req.trace_lsp_messages = env_flag_enabled("LSP_TRACE_LSP");
+    req.trace_request_timing = env_flag_enabled("LSP_TRACE_RPC");
 
     const std::filesystem::path report_path =
         normalize_output_path(
@@ -1455,7 +1457,7 @@ json jdtls_expand_report_result(const json &arguments)
             "reportPath",
             std::filesystem::path(".codex") /
                 "analysis" /
-                clspc::report::default_report_file_name(
+                default_report_file_name(
                     req.class_name,
                     req.method_name));
 
@@ -1466,7 +1468,7 @@ json jdtls_expand_report_result(const json &arguments)
             "mermaidPath",
             std::filesystem::path(".codex") /
                 "analysis" /
-                clspc::report::default_mermaid_file_name(
+                default_mermaid_file_name(
                     req.class_name,
                     req.method_name));
 
@@ -1477,7 +1479,7 @@ json jdtls_expand_report_result(const json &arguments)
             "svgPath",
             std::filesystem::path(".codex") /
                 "analysis" /
-                clspc::report::default_svg_file_name(
+                default_svg_file_name(
                     req.class_name,
                     req.method_name));
 
@@ -1491,18 +1493,18 @@ json jdtls_expand_report_result(const json &arguments)
              " method=" + req.method_name +
              " direction=" + req.direction);
 
-    const clspc::service::ExpandCallsResponse resp =
+    const ExpandCallsResponse resp =
         live_session().expand_calls(req);
 
-    clspc::report::ExpandReportOptions report_options;
+    ExpandReportOptions report_options;
     report_options.root_dir = req.launch.root_dir;
     report_options.user_request = user_request;
 
     const std::string markdown =
-        clspc::report::render_expand_calls_markdown(req, resp, report_options);
+        render_expand_calls_markdown(req, resp, report_options);
 
     const std::string mermaid =
-        clspc::report::render_expand_calls_mermaid(req, resp, report_options);
+        render_expand_calls_mermaid(req, resp, report_options);
 
     write_text_file(report_path, markdown);
     write_text_file(mermaid_path, mermaid);
@@ -1571,7 +1573,7 @@ int main()
         install_signal_handlers();
         maybe_redirect_stderr_to_log_file();
     } catch (const std::exception &ex) {
-        std::cerr << "[clspc_mcp_smoke] fatal logging setup error: "
+        std::cerr << "[lsp_mcp] fatal logging setup error: "
                   << ex.what() << "\n";
         return 2;
     }

@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace clspc::report {
+namespace lspmb::report {
 
 struct ExpandReportOptions
 {
@@ -22,8 +22,8 @@ std::string default_mermaid_file_name(
     const std::string &method_name);
 
 std::string render_expand_calls_markdown(
-    const clspc::service::ExpandCallsRequest &req,
-    const clspc::service::ExpandCallsResponse &resp,
+    const lspmb::service::ExpandCallsRequest &req,
+    const lspmb::service::ExpandCallsResponse &resp,
     const ExpandReportOptions &options);
 
 std::string default_svg_file_name(
@@ -31,13 +31,13 @@ std::string default_svg_file_name(
     const std::string &method_name);
 
 std::string render_expand_calls_markdown(
-    const clspc::service::ExpandCallsRequest &req,
-    const clspc::service::ExpandCallsResponse &resp,
+    const lspmb::service::ExpandCallsRequest &req,
+    const lspmb::service::ExpandCallsResponse &resp,
     const ExpandReportOptions &options);
 
 std::string render_expand_calls_mermaid(
-    const clspc::service::ExpandCallsRequest &req,
-    const clspc::service::ExpandCallsResponse &resp,
+    const lspmb::service::ExpandCallsRequest &req,
+    const lspmb::service::ExpandCallsResponse &resp,
     const ExpandReportOptions &options);
 
-}  // namespace clspc::report
+}  // namespace lspmb::report

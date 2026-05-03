@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-namespace clspc::service {
+namespace lspmb::service {
 
 struct InitializeProbeRequest
 {
@@ -121,4 +121,4 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace clspc::service
+}  // namespace lspmb::service
