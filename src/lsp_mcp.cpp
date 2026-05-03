@@ -784,6 +784,7 @@ MermaidRenderResult render_mermaid_svg(
 
     const std::string renderer =
         getenv_or("LSP_MMDC_BIN", "mmdc");
+    log_line("mmdc bin found: " + renderer);
 
     const int devnull_in = ::open("/dev/null", O_RDONLY);
     if (devnull_in < 0) {
