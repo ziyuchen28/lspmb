@@ -1,3 +1,4 @@
+
 BUILD_DIR := build
 TOOLS_DIR := .tools
 
@@ -28,6 +29,51 @@ config:
 build: config
 	@echo "==> Building project..."
 	cmake --build $(BUILD_DIR) -j -- --no-print-directory
+
+
+install-jre:
+	@echo "==> Installing hermetic Java 21 JRE..."
+	@mkdir -p $(TOOLS_DIR)
+	@if [ ! -x "$(TOOLS_DIR)/jre/bin/java" ]; then \
+		set -e; \
+		echo "Detecting OS and Architecture..."; \
+		OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
+		ARCH=$$(uname -m); \
+		if [ "$$OS" = "darwin" ]; then API_OS="mac"; else API_OS="linux"; fi; \
+		if [ "$$ARCH" = "x86_64" ]; then API_ARCH="x64"; \
+		elif [ "$$ARCH" = "arm64" ] || [ "$$ARCH" = "aarch64" ]; then API_ARCH="aarch64"; \
+		else echo "Unsupported architecture: $$ARCH"; exit 1; fi; \
+		URL="https://api.adoptium.net/v3/binary/latest/21/ga/$${API_OS}/$${API_ARCH}/jre/hotspot/normal/eclipse?project=jdk"; \
+		echo "Downloading Eclipse Temurin JRE 21 ($${API_OS}-$${API_ARCH})..."; \
+		curl -L -f "$$URL" -o $(TOOLS_DIR)/jre.tar.gz; \
+		mkdir -p $(TOOLS_DIR)/jre; \
+		echo "Extracting JRE..."; \
+		# --strip-components=1 is magic: it removes the parent folder in the tarball \
+		tar -xzf $(TOOLS_DIR)/jre.tar.gz -C $(TOOLS_DIR)/jre --strip-components=1; \
+		rm $(TOOLS_DIR)/jre.tar.gz; \
+		echo "==> Hermetic JRE successfully installed to: ./$(TOOLS_DIR)/jre"; \
+	else \
+		echo "==> Hermetic JRE is already installed."; \
+	fi
+
+
+install-jdtls: install-jre
+	@echo "==> Setting up JDTLS sandbox..."
+	@mkdir -p $(TOOLS_DIR)
+	@if [ ! -x "$(TOOLS_DIR)/jdtls/bin/jdtls" ]; then \
+		set -e; \
+		echo "Downloading JDTLS 1.57.0..."; \
+		# Added -f to curl so it crashes on 404 instead of downloading HTML \
+		curl -L -f "https://download.eclipse.org/jdtls/milestones/1.57.0/jdt-language-server-1.57.0-202602261110.tar.gz" -o $(TOOLS_DIR)/jdtls.tar.gz; \
+		mkdir -p $(TOOLS_DIR)/jdtls; \
+		echo "Extracting JDTLS..."; \
+		tar -xzf $(TOOLS_DIR)/jdtls.tar.gz -C $(TOOLS_DIR)/jdtls; \
+		rm $(TOOLS_DIR)/jdtls.tar.gz; \
+		chmod +x $(TOOLS_DIR)/jdtls/bin/jdtls; \
+		echo "==> JDTLS successfully installed to: ./$(TOOLS_DIR)/jdtls"; \
+	else \
+		echo "==> JDTLS is already installed."; \
+	fi
 
 
 install-mermaid:
@@ -82,35 +128,4 @@ de-git:
 	else \
 		echo "==> Aborted de-git operation."; \
 	fi
-
-# install-mermaid:
-# 	@mkdir -p $(TOOLS_DIR)
-# 	@if ! command -v mmdc >/dev/null 2>&1; then \
-# 		echo "Installing Mermaid CLI (requires npm)..."; \
-# 		npm install -g @mermaid-js/mermaid-cli; \
-# 	else \
-# 		echo "Mermaid CLI is already installed."; \
-# 	fi
-#
-#
-# install-all-langjava:
-# 	@echo "==> Setting up Java Environment..."
-# 		@if [ ! -d "$(TOOLS_DIR)/jdtls" ]; then \
-# 			echo "Downloading JDTLS..."; \
-# 			curl -L "https://download.eclipse.org/jdtls/milestones/1.57.0/jdt-language-server-1.57.0-202402151200.tar.gz" -o $(TOOLS_DIR)/jdtls.tar.gz; \
-# 			mkdir -p $(TOOLS_DIR)/jdtls; \
-# 			tar -xzf $(TOOLS_DIR)/jdtls.tar.gz -C $(TOOLS_DIR)/jdtls; \
-# 			rm $(TOOLS_DIR)/jdtls.tar.gz; \
-# 			echo "JDTLS installed locally to $(TOOLS_DIR)/jdtls"; \
-# 		else \
-# 			echo "JDTLS is already installed."; \
-# 		fi
-#
-# install-all-langcpp:
-#
-#
-#
-# install-all-langpython:
-
-
 
