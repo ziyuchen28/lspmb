@@ -48,7 +48,6 @@ install-jre:
 		curl -L -f "$$URL" -o $(TOOLS_DIR)/jre.tar.gz; \
 		mkdir -p $(TOOLS_DIR)/jre; \
 		echo "Extracting JRE..."; \
-		# --strip-components=1 is magic: it removes the parent folder in the tarball \
 		tar -xzf $(TOOLS_DIR)/jre.tar.gz -C $(TOOLS_DIR)/jre --strip-components=1; \
 		rm $(TOOLS_DIR)/jre.tar.gz; \
 		echo "==> Hermetic JRE successfully installed to: ./$(TOOLS_DIR)/jre"; \
@@ -63,7 +62,6 @@ install-jdtls: install-jre
 	@if [ ! -x "$(TOOLS_DIR)/jdtls/bin/jdtls" ]; then \
 		set -e; \
 		echo "Downloading JDTLS 1.57.0..."; \
-		# Added -f to curl so it crashes on 404 instead of downloading HTML \
 		curl -L -f "https://download.eclipse.org/jdtls/milestones/1.57.0/jdt-language-server-1.57.0-202602261110.tar.gz" -o $(TOOLS_DIR)/jdtls.tar.gz; \
 		mkdir -p $(TOOLS_DIR)/jdtls; \
 		echo "Extracting JDTLS..."; \
