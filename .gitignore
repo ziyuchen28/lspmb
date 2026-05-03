@@ -1,0 +1,4 @@
+build/
+private/
+.env
+test_cli.sh
