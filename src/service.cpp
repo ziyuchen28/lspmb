@@ -523,11 +523,18 @@ ExpandCallsResponse LiveSession::expand_calls(const ExpandCallsRequest &req)
             req.method_name,
             graph_options);
 
+        auto snippets =
+            lspx::snippet::collect_call_graph_snippets_from_disk(
+                result.root,
+                snippet_options);
+
+        service_trace_line(
+            trace,
+            "outgoing snippets collected, size=" + std::to_string(snippets.size()));
+
         resp.outgoing = ExpandedCallTree{
             .root = std::move(result.root),
-            .snippets = lspx::snippet::collect_call_graph_snippets_from_disk(
-                result.root,
-                snippet_options),
+            .snippets = snippets,
         };
     }
 
@@ -538,11 +545,18 @@ ExpandCallsResponse LiveSession::expand_calls(const ExpandCallsRequest &req)
             req.method_name,
             graph_options);
 
+        auto snippets =
+            lspx::snippet::collect_call_graph_snippets_from_disk(
+                result.root,
+                snippet_options);
+
+        service_trace_line(
+            trace,
+            "incoming snippets collected, size=" + std::to_string(snippets.size()));
+
         resp.incoming = ExpandedCallTree{
             .root = std::move(result.root),
-            .snippets = lspx::snippet::collect_call_graph_snippets_from_disk(
-                result.root,
-                snippet_options),
+            .snippets = std::move(snippets),
         };
     }
 
