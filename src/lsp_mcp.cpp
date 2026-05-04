@@ -94,8 +94,9 @@ const char *signal_name(int signum)
 }
 
 
-bool path_is_under_root(const std::filesystem::path &root,
-                        const std::filesystem::path &path)
+bool path_is_under_root(
+    const std::filesystem::path &root,
+    const std::filesystem::path &path)
 {
     const std::filesystem::path abs_root =
         std::filesystem::absolute(root).lexically_normal();
@@ -121,8 +122,9 @@ bool path_is_under_root(const std::filesystem::path &root,
 }
 
 
-std::string path_relative_to_root(const std::filesystem::path &root,
-                                  const std::filesystem::path &path)
+std::string path_relative_to_root(
+    const std::filesystem::path &root,
+    const std::filesystem::path &path)
 {
     const std::filesystem::path abs_root =
         std::filesystem::absolute(root).lexically_normal();
@@ -180,8 +182,9 @@ std::filesystem::path normalize_output_path(
 }
 
 
-void write_text_file(const std::filesystem::path &path,
-                     const std::string &text)
+void write_text_file(
+    const std::filesystem::path &path,
+    const std::string &text)
 {
     std::filesystem::create_directories(path.parent_path());
 
@@ -364,34 +367,6 @@ json range_json(const Range &range)
     };
 }
 
-json initialize_result_json(const InitializeResult &r)
-{
-    return json{
-        {"serverName", r.server_name},
-        {"serverVersion", r.server_version},
-        {"hasDefinitionProvider", r.has_definition_provider},
-        {"hasImplementationProvider", r.has_implementation_provider},
-        {"hasReferencesProvider", r.has_references_provider},
-        {"hasHoverProvider", r.has_hover_provider},
-        {"hasDocumentSymbolProvider", r.has_document_symbol_provider},
-        {"hasCallHierarchyProvider", r.has_call_hierarchy_provider},
-        {"hasWorkspaceSymbolProvider", r.has_workspace_symbol_provider}
-    };
-}
-
-json initialize_probe_response_json(const InitializeProbeResponse &r,
-                                    const LaunchOptions &launch)
-{
-    return json{
-        {"ok", true},
-        {"root", launch.root_dir.string()},
-        {"workspaceDir", launch.workspace_dir.string()},
-        {"jdtlsHome", launch.jdtls_home.string()},
-        {"javaBin", launch.java_bin},
-        {"initialize", initialize_result_json(r.initialize)}
-    };
-}
-
 json document_symbol_json(const DocumentSymbol &symbol)
 {
     json children = json::array();
@@ -409,20 +384,20 @@ json document_symbol_json(const DocumentSymbol &symbol)
     };
 }
 
-json document_symbols_response_json(const DocumentSymbolsResponse &r)
-{
-    json symbols = json::array();
-    for (const DocumentSymbol &symbol : r.symbols) {
-        symbols.push_back(document_symbol_json(symbol));
-    }
-
-    return json{
-        {"ok", true},
-        {"file", r.file.string()},
-        {"topLevelCount", r.symbols.size()},
-        {"symbols", std::move(symbols)}
-    };
-}
+// json document_symbols_response_json(const DocumentSymbolsResponse &r)
+// {
+//     json symbols = json::array();
+//     for (const DocumentSymbol &symbol : r.symbols) {
+//         symbols.push_back(document_symbol_json(symbol));
+//     }
+//
+//     return json{
+//         {"ok", true},
+//         {"file", r.file.string()},
+//         {"topLevelCount", r.symbols.size()},
+//         {"symbols", std::move(symbols)}
+//     };
+// }
 
 
 json workspace_symbol_json(const WorkspaceSymbol &symbol)
@@ -467,27 +442,27 @@ json call_hierarchy_item_json(const CallHierarchyItem &item)
 }
 
 
-json resolve_anchor_response_json(const ResolveAnchorResponse &resp)
-{
-    const ResolvedAnchor &anchor = resp.anchor;
-
-    json out{
-        {"ok", true},
-        {"file", anchor.file.string()},
-        {"className", anchor.query},
-        {"methodName", anchor.function_name},
-        {"attempts", anchor.attempts},
-        {"candidateCount", anchor.candidate_count},
-        {"methodSymbol", document_symbol_json(anchor.function_symbol)},
-        {"callItem", call_hierarchy_item_json(anchor.call_item)}
-    };
-
-    if (anchor.query_symbol.has_value()) {
-        out["classSymbol"] = workspace_symbol_json(*anchor.query_symbol);
-    }
-
-    return out;
-}
+// json resolve_anchor_response_json(const ResolveAnchorResponse &resp)
+// {
+//     const ResolvedAnchor &anchor = resp.anchor;
+//
+//     json out{
+//         {"ok", true},
+//         {"file", anchor.file.string()},
+//         {"className", anchor.query},
+//         {"methodName", anchor.function_name},
+//         {"attempts", anchor.attempts},
+//         {"candidateCount", anchor.candidate_count},
+//         {"methodSymbol", document_symbol_json(anchor.function_symbol)},
+//         {"callItem", call_hierarchy_item_json(anchor.call_item)}
+//     };
+//
+//     if (anchor.query_symbol.has_value()) {
+//         out["classSymbol"] = workspace_symbol_json(*anchor.query_symbol);
+//     }
+//
+//     return out;
+// }
 
 json resolved_anchor_json(const ResolvedAnchor &anchor)
 {
@@ -627,10 +602,11 @@ json make_result(const json &id, json result)
 }
 
 
-json make_error(const json &id,
-                int code,
-                std::string message,
-                std::optional<json> data = std::nullopt) 
+json make_error(
+    const json &id,
+    int code,
+    std::string message,
+    std::optional<json> data = std::nullopt) 
 {
     json err{
         {"code", code},
@@ -664,109 +640,6 @@ struct MermaidRenderResult
     std::filesystem::path svg_path;
     std::string error;
 };
-
-int spawn_and_wait(const std::vector<std::string> &argv)
-{
-    if (argv.empty()) {
-        throw std::runtime_error("spawn_and_wait: empty argv");
-    }
-
-    std::vector<char *> raw_argv;
-    raw_argv.reserve(argv.size() + 1);
-
-    for (const std::string &arg : argv) {
-        raw_argv.push_back(const_cast<char *>(arg.c_str()));
-    }
-    raw_argv.push_back(nullptr);
-
-    pid_t pid = -1;
-    const int rc = ::posix_spawnp(
-        &pid,
-        raw_argv[0],
-        nullptr,
-        nullptr,
-        raw_argv.data(),
-        environ);
-
-    if (rc != 0) {
-        throw std::runtime_error(
-            "posix_spawnp failed for '" + argv[0] + "': " + std::strerror(rc));
-    }
-
-    int status = 0;
-    for (;;) {
-        const pid_t w = ::waitpid(pid, &status, 0);
-        if (w < 0) {
-            if (errno == EINTR) {
-                continue;
-            }
-            throw std::runtime_error(
-                "waitpid failed for '" + argv[0] + "': " + std::strerror(errno));
-        }
-        break;
-    }
-
-    if (WIFEXITED(status)) {
-        return WEXITSTATUS(status);
-    }
-
-    if (WIFSIGNALED(status)) {
-        std::ostringstream out;
-        out << "renderer terminated by signal " << WTERMSIG(status);
-        throw std::runtime_error(out.str());
-    }
-
-    throw std::runtime_error("renderer ended in unknown state");
-}
-
-MermaidRenderResult maybe_render_mermaid_svg(const json &arguments,
-                                             const std::filesystem::path &mmd_path,
-                                             const std::filesystem::path &svg_path)
-{
-    MermaidRenderResult result;
-    result.svg_path = svg_path;
-
-    const bool render_svg = arguments.value("renderSvg", true);
-    if (!render_svg) {
-        return result;
-    }
-
-    const std::string renderer =
-        getenv_or("LSP_MMDC_BIN", "mmdc");
-
-    result.attempted = true;
-    result.renderer = renderer;
-
-    try {
-        std::vector<std::string> argv{
-            renderer,
-            "-i", mmd_path.string(),
-            "-o", svg_path.string(),
-            "-b", "transparent"
-        };
-
-        if (const std::optional<std::string> config =
-                getenv_nonempty("LSP_MMDC_CONFIG"); config.has_value()) {
-            argv.push_back("--configFile");
-            argv.push_back(*config);
-        }
-
-        const int exit_code = spawn_and_wait(argv);
-        if (exit_code != 0) {
-            std::ostringstream out;
-            out << "renderer exited with status " << exit_code;
-            result.error = out.str();
-            return result;
-        }
-
-        result.ok = true;
-        return result;
-    } catch (const std::exception &ex) {
-        result.error = ex.what();
-        return result;
-    }
-}
-
 
 MermaidRenderResult render_mermaid_svg(
     const json &arguments,
@@ -848,77 +721,6 @@ MermaidRenderResult render_mermaid_svg(
 }
 
 
-
-
-//
-// json smoke_echo_tool_definition() 
-// {
-//     return json{
-//         {"name", "smoke_echo"},
-//         {"title", "Smoke Echo"},
-//         {"description", "A tiny smoke-test tool that echoes a message and returns process metadata."},
-//         {"inputSchema", {
-//             {"type", "object"},
-//             {"properties", {
-//                 {"message", {
-//                     {"type", "string"},
-//                     {"description", "The message to echo back."}
-//                 }},
-//                 {"uppercase", {
-//                     {"type", "boolean"},
-//                     {"description", "If true, uppercase the echoed message."},
-//                     {"default", false}
-//                 }}
-//             }},
-//             {"required", json::array({"message"})}
-//         }},
-//         {"outputSchema", {
-//             {"type", "object"},
-//             {"properties", {
-//                 {"ok", {{"type", "boolean"}}},
-//                 {"echoed", {{"type", "string"}}},
-//                 {"uppercase", {{"type", "boolean"}}},
-//                 {"pid", {{"type", "integer"}}},
-//                 {"timestamp_utc", {{"type", "string"}}}
-//             }},
-//             {"required", json::array({"ok", "echoed", "uppercase", "pid", "timestamp_utc"})}
-//         }}
-//     };
-// }
-//
-//
-// json jdtls_initialize_probe_tool_definition()
-// {
-//     return json{
-//         {"name", "jdtls_initialize_probe"},
-//         {"title", "Jdtls Initialize Probe"},
-//         {"description", "Launch JDTLS, initialize an LSP session, and return the server capabilities."},
-//         {"inputSchema", {
-//             {"type", "object"},
-//             {"properties", {
-//                 {"root", {
-//                     {"type", "string"},
-//                     {"description", "Absolute path to the repo root."}
-//                 }},
-//                 {"workspaceDir", {
-//                     {"type", "string"},
-//                     {"description", "Absolute path to the persistent JDTLS workspace/data dir."}
-//                 }},
-//                 {"jdtlsHome", {
-//                     {"type", "string"},
-//                     {"description", "Optional JDTLS install dir. Defaults to LSP_JDTLS_HOME."}
-//                 }},
-//                 {"javaBin", {
-//                     {"type", "string"},
-//                     {"description", "Optional java executable. Defaults to LSP_JAVA_BIN or 'java'."}
-//                 }}
-//             }},
-//             {"required", json::array({"root", "workspaceDir"})}
-//         }}
-//     };
-// }
-//
-//
 // json jdtls_document_symbols_tool_definition()
 // {
 //     return json{
@@ -1137,103 +939,41 @@ json jdtls_expand_report_tool_definition()
     };
 }
 
-json smoke_echo_result(const json &arguments) 
-{
-    if (!arguments.is_object()) {
-        throw std::runtime_error("arguments must be an object");
-    }
 
-    if (!arguments.contains("message") || !arguments.at("message").is_string()) {
-        throw std::runtime_error("argument 'message' is required and must be a string");
-    }
-
-    const std::string message = arguments.at("message").get<std::string>();
-    const bool uppercase = arguments.value("uppercase", false);
-
-    const std::string echoed = uppercase ? uppercase_copy(message) : message;
-
-    json structured {
-        {"ok", true},
-        {"echoed", echoed},
-        {"uppercase", uppercase},
-        {"pid", static_cast<int>(::getpid())},
-        {"timestamp_utc", now_utc_iso8601()}
-    };
-
-    return json {
-        {"content", json::array({
-            {
-                {"type", "text"},
-                {"text", "smoke_echo ok: " + echoed}
-            }
-        })},
-        {"structuredContent", structured}
-    };
-}
-
-
-json jdtls_initialize_probe_result(const json &arguments)
-{
-    if (!arguments.is_object()) {
-        throw std::runtime_error("arguments must be an object");
-    }
-
-    InitializeProbeRequest req;
-    req.launch = parse_launch_arguments(arguments);
-    req.trace_lsp_messages = false;
-    req.trace_request_timing = false;
-
-    const InitializeProbeResponse resp =
-        run_initialize_probe(req);
-
-    const json structured = initialize_probe_response_json(resp, req.launch);
-
-    return json{
-        {"content", json::array({
-            {
-                {"type", "text"},
-                {"text", "jdtls_initialize_probe ok: " + resp.initialize.server_name}
-            }
-        })},
-        {"structuredContent", structured}
-    };
-}
-
-
-json jdtls_document_symbols_result(const json &arguments)
-{
-    if (!arguments.is_object()) {
-        throw std::runtime_error("arguments must be an object");
-    }
-
-    DocumentSymbolsRequest req;
-    req.launch = parse_launch_arguments(arguments);
-    req.file = parse_required_abs_path(arguments, "file");
-    req.trace_lsp_messages = env_flag_enabled("LSP_TRACE_LSP");
-    req.trace_request_timing = env_flag_enabled("LSP_TRACE_RPC");
-
-    log_line("jdtls_document_symbols service begin");
-
-    const DocumentSymbolsResponse resp =
-        run_document_symbols(req);
-
-    log_line("jdtls_document_symbols service returned");
-
-    const json structured = document_symbols_response_json(resp);
-
-    log_line("jdtls_document_symbols json built");
-
-    return json{
-        {"content", json::array({
-            {
-                {"type", "text"},
-                {"text", "jdtls_document_symbols ok: " + resp.file.filename().string() +
-                         " (" + std::to_string(resp.symbols.size()) + " top-level symbols)"}
-            }
-        })},
-        {"structuredContent", structured}
-    };
-}
+// json jdtls_document_symbols_result(const json &arguments)
+// {
+//     if (!arguments.is_object()) {
+//         throw std::runtime_error("arguments must be an object");
+//     }
+//
+//     DocumentSymbolsRequest req;
+//     req.launch = parse_launch_arguments(arguments);
+//     req.file = parse_required_abs_path(arguments, "file");
+//     req.trace_lsp_messages = env_flag_enabled("LSP_TRACE_LSP");
+//     req.trace_request_timing = env_flag_enabled("LSP_TRACE_RPC");
+//
+//     log_line("jdtls_document_symbols service begin");
+//
+//     const DocumentSymbolsResponse resp =
+//         run_document_symbols(req);
+//
+//     log_line("jdtls_document_symbols service returned");
+//
+//     const json structured = document_symbols_response_json(resp);
+//
+//     log_line("jdtls_document_symbols json built");
+//
+//     return json{
+//         {"content", json::array({
+//             {
+//                 {"type", "text"},
+//                 {"text", "jdtls_document_symbols ok: " + resp.file.filename().string() +
+//                          " (" + std::to_string(resp.symbols.size()) + " top-level symbols)"}
+//             }
+//         })},
+//         {"structuredContent", structured}
+//     };
+// }
 
 
 json initialize_result(const json &params) 
@@ -1263,95 +1003,95 @@ json initialize_result(const json &params)
 }
 
 
-json jdtls_resolve_anchor_result(const json &arguments)
-{
-    if (!arguments.is_object()) {
-        throw std::runtime_error("arguments must be an object");
-    }
-
-    ResolveAnchorRequest req;
-    req.launch = parse_launch_arguments(arguments);
-    req.class_name = parse_required_string(arguments, "class");
-    req.method_name = parse_required_string(arguments, "method");
-    req.trace_lsp_messages = env_flag_enabled("LSP_TRACE_LSP");
-    req.trace_request_timing = env_flag_enabled("LSP_TRACE_RPC");
-
-    log_line("jdtls_resolve_anchor service begin"
-             " class=" + req.class_name +
-             " method=" + req.method_name);
-
-    // const ResolveAnchorResponse resp =
-    //     run_resolve_anchor(req);
-
-    const ResolveAnchorResponse resp =
-        live_session().resolve_anchor(req);
-
-    log_line("jdtls_resolve_anchor service returned"
-             " file=" + resp.anchor.file.string());
-
-    const json structured = resolve_anchor_response_json(resp);
-
-    return json{
-        {"content", json::array({
-            {
-                {"type", "text"},
-                {"text", "jdtls_resolve_anchor ok: " +
-                         resp.anchor.query + "." +
-                         resp.anchor.function_name + " -> " +
-                         resp.anchor.file.filename().string()}
-            }
-        })},
-        {"structuredContent", structured}
-    };
-}
-
-
-json jdtls_expand_calls_result(const json &arguments)
-{
-    if (!arguments.is_object()) {
-        throw std::runtime_error("arguments must be an object");
-    }
-
-    ExpandCallsRequest req;
-    req.launch = parse_launch_arguments(arguments);
-    req.class_name = parse_required_string(arguments, "class");
-    req.method_name = parse_required_string(arguments, "method");
-    req.direction = arguments.value("direction", std::string("incoming"));
-    req.max_depth = arguments.value("maxDepth", 3);
-    req.snippet_padding_before =
-        static_cast<std::size_t>(arguments.value("snippetPaddingBefore", 1));
-    req.snippet_padding_after =
-        static_cast<std::size_t>(arguments.value("snippetPaddingAfter", 1));
-    req.trace_lsp_messages = env_flag_enabled("LSP_TRACE_LSP");
-    req.trace_request_timing = env_flag_enabled("LSP_TRACE_RPC");
-
-    log_line("jdtls_expand_calls service begin"
-             " class=" + req.class_name +
-             " method=" + req.method_name +
-             " direction=" + req.direction);
-
-    const ExpandCallsResponse resp =
-        live_session().expand_calls(req);
-
-    log_line("jdtls_expand_calls service returned"
-             " direction=" + resp.direction);
-
-    const json structured = expand_calls_response_json(resp);
-
-    return json{
-        {"content", json::array({
-            {
-                {"type", "text"},
-                {"text", "jdtls_expand_calls ok: " +
-                         resp.direction + " tree for " +
-                         resp.resolved_anchor.query + "." +
-                         resp.resolved_anchor.function_name}
-            }
-        })},
-        {"structuredContent", structured}
-    };
-}
-
+// json jdtls_resolve_anchor_result(const json &arguments)
+// {
+//     if (!arguments.is_object()) {
+//         throw std::runtime_error("arguments must be an object");
+//     }
+//
+//     ResolveAnchorRequest req;
+//     req.launch = parse_launch_arguments(arguments);
+//     req.class_name = parse_required_string(arguments, "class");
+//     req.method_name = parse_required_string(arguments, "method");
+//     req.trace_lsp_messages = env_flag_enabled("LSP_TRACE_LSP");
+//     req.trace_request_timing = env_flag_enabled("LSP_TRACE_RPC");
+//
+//     log_line("jdtls_resolve_anchor service begin"
+//              " class=" + req.class_name +
+//              " method=" + req.method_name);
+//
+//     // const ResolveAnchorResponse resp =
+//     //     run_resolve_anchor(req);
+//
+//     const ResolveAnchorResponse resp =
+//         live_session().resolve_anchor(req);
+//
+//     log_line("jdtls_resolve_anchor service returned"
+//              " file=" + resp.anchor.file.string());
+//
+//     const json structured = resolve_anchor_response_json(resp);
+//
+//     return json{
+//         {"content", json::array({
+//             {
+//                 {"type", "text"},
+//                 {"text", "jdtls_resolve_anchor ok: " +
+//                          resp.anchor.query + "." +
+//                          resp.anchor.function_name + " -> " +
+//                          resp.anchor.file.filename().string()}
+//             }
+//         })},
+//         {"structuredContent", structured}
+//     };
+// }
+//
+//
+// json jdtls_expand_calls_result(const json &arguments)
+// {
+//     if (!arguments.is_object()) {
+//         throw std::runtime_error("arguments must be an object");
+//     }
+//
+//     ExpandCallsRequest req;
+//     req.launch = parse_launch_arguments(arguments);
+//     req.class_name = parse_required_string(arguments, "class");
+//     req.method_name = parse_required_string(arguments, "method");
+//     req.direction = arguments.value("direction", std::string("incoming"));
+//     req.max_depth = arguments.value("maxDepth", 3);
+//     req.snippet_padding_before =
+//         static_cast<std::size_t>(arguments.value("snippetPaddingBefore", 1));
+//     req.snippet_padding_after =
+//         static_cast<std::size_t>(arguments.value("snippetPaddingAfter", 1));
+//     req.trace_lsp_messages = env_flag_enabled("LSP_TRACE_LSP");
+//     req.trace_request_timing = env_flag_enabled("LSP_TRACE_RPC");
+//
+//     log_line("jdtls_expand_calls service begin"
+//              " class=" + req.class_name +
+//              " method=" + req.method_name +
+//              " direction=" + req.direction);
+//
+//     const ExpandCallsResponse resp =
+//         live_session().expand_calls(req);
+//
+//     log_line("jdtls_expand_calls service returned"
+//              " direction=" + resp.direction);
+//
+//     const json structured = expand_calls_response_json(resp);
+//
+//     return json{
+//         {"content", json::array({
+//             {
+//                 {"type", "text"},
+//                 {"text", "jdtls_expand_calls ok: " +
+//                          resp.direction + " tree for " +
+//                          resp.resolved_anchor.query + "." +
+//                          resp.resolved_anchor.function_name}
+//             }
+//         })},
+//         {"structuredContent", structured}
+//     };
+// }
+//
 
 // json jdtls_expand_report_result(const json &arguments)
 // {
@@ -1633,8 +1373,6 @@ int main()
             }
             send_json(make_result(id, json{
                 {"tools", json::array({
-                    // smoke_echo_tool_definition(),
-                    // jdtls_initialize_probe_tool_definition(),
                     // jdtls_document_symbols_tool_definition(),
                     // jdtls_resolve_anchor_tool_definition(),
                     // jdtls_expand_calls_tool_definition(),
@@ -1658,16 +1396,6 @@ int main()
             const json arguments = params.value("arguments", json::object());
 
             try {
-                // if (tool_name == "smoke_echo") {
-                //     send_json(make_result(id, smoke_echo_result(arguments)));
-                //     continue;
-                // }
-
-                // if (tool_name == "jdtls_initialize_probe") {
-                //     send_json(make_result(id, jdtls_initialize_probe_result(arguments)));
-                //     continue;
-                // }
-
                 // if (tool_name == "jdtls_document_symbols") {
                 //     log_line("tools/call jdtls_document_symbols begin");
                 //     json result = jdtls_document_symbols_result(arguments);

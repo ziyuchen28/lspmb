@@ -28,8 +28,9 @@ std::string format_range(const Range &range)
     return out.str();
 }
 
-std::string display_path(const std::filesystem::path &root,
-                         const std::filesystem::path &path)
+std::string display_path(
+    const std::filesystem::path &root,
+    const std::filesystem::path &path)
 {
     if (path.empty()) {
         return "<none>";
@@ -111,8 +112,9 @@ std::string mermaid_item_key(const CallHierarchyItem &item)
     return out.str();
 }
 
-std::string mermaid_node_id_for_item(MermaidState &state,
-                                     const CallHierarchyItem &item)
+std::string mermaid_node_id_for_item(
+    MermaidState &state,
+    const CallHierarchyItem &item)
 {
     const std::string key = mermaid_item_key(item);
 
@@ -128,8 +130,9 @@ std::string mermaid_node_id_for_item(MermaidState &state,
     return id;
 }
 
-std::string mermaid_anchor_label(const std::filesystem::path &root,
-                                 const ResolvedAnchor &anchor)
+std::string mermaid_anchor_label(
+    const std::filesystem::path &root,
+    const ResolvedAnchor &anchor)
 {
     std::ostringstream out;
     out << anchor.query
@@ -166,12 +169,13 @@ void emit_mermaid_node(std::ostream &os,
     os << "    " << id << "[\"" << label << "\"]\n";
 }
 
-void append_mermaid_children(std::ostream &os,
-                             MermaidState &state,
-                             const std::filesystem::path &root,
-                             const ExpandedNode &node,
-                             const std::string &parent_id,
-                             bool incoming)
+void append_mermaid_children(
+    std::ostream &os,
+    MermaidState &state,
+    const std::filesystem::path &root,
+    const ExpandedNode &node,
+    const std::string &parent_id,
+    bool incoming)
 {
     for (const ExpandedNode &child : node.children) {
         const std::string child_id =
@@ -226,10 +230,11 @@ std::string source_snippet_line_range(const SourceSnippet  &snippet)
     return out.str();
 }
 
-void append_node_tree(std::ostream &os,
-                      const ExpandedNode &node,
-                      const std::filesystem::path &root,
-                      int depth)
+void append_node_tree(
+    std::ostream &os,
+    const ExpandedNode &node,
+    const std::filesystem::path &root,
+    int depth)
 {
     const std::string indent(static_cast<std::size_t>(depth * 2), ' ');
 
@@ -255,9 +260,10 @@ void append_node_tree(std::ostream &os,
     }
 }
 
-void append_snippets(std::ostream &os,
-                     const std::vector<CallGraphSnippet> &snippets,
-                     const std::filesystem::path &root)
+void append_snippets(
+    std::ostream &os,
+    const std::vector<CallGraphSnippet> &snippets,
+    const std::filesystem::path &root)
 {
     if (snippets.empty()) {
         os << "None returned.\n\n";
@@ -282,10 +288,11 @@ void append_snippets(std::ostream &os,
     }
 }
 
-void append_branch(std::ostream &os,
-                   const char *title,
-                   const std::optional<lspmb::service::ExpandedCallTree> &branch,
-                   const std::filesystem::path &root)
+void append_branch(
+    std::ostream &os,
+    const char *title,
+    const std::optional<lspmb::service::ExpandedCallTree> &branch,
+    const std::filesystem::path &root)
 {
     os << "## " << title << "\n\n";
 
@@ -305,16 +312,18 @@ void append_branch(std::ostream &os,
 }  // namespace
 
 
-std::string default_mermaid_file_name(const std::string &class_name,
-                                      const std::string &method_name)
+std::string default_mermaid_file_name(
+    const std::string &class_name,
+    const std::string &method_name)
 {
     return sanitize_file_part(class_name) + "-" +
            sanitize_file_part(method_name) +
            "-dependency.mmd";
 }
 
-std::string default_svg_file_name(const std::string &class_name,
-                                  const std::string &method_name)
+std::string default_svg_file_name(
+    const std::string &class_name,
+    const std::string &method_name)
 {
     return sanitize_file_part(class_name) + "-" +
            sanitize_file_part(method_name) +
@@ -374,8 +383,9 @@ std::string render_expand_calls_mermaid(
 }
 
 
-std::string default_report_file_name(const std::string &class_name,
-                                     const std::string &method_name)
+std::string default_report_file_name(
+    const std::string &class_name,
+    const std::string &method_name)
 {
     return sanitize_file_part(class_name) + "-" +
            sanitize_file_part(method_name) +
@@ -416,12 +426,6 @@ std::string render_expand_calls_markdown(
 
     append_branch(os, "3. Incoming dependencies", resp.incoming, root);
     append_branch(os, "4. Outgoing dependencies", resp.outgoing, root);
-
-    os << "## 5. Impact notes\n\n";
-    os << "- Treat the semantic graph as the primary caller/callee signal.\n";
-    os << "- Review the snippets above before editing behavior, control flow, or signatures.\n";
-    os << "- If the code uses reflection, dynamic proxies, runtime plugin/provider loading, "
-          "or string-based framework wiring, the graph may be incomplete.\n\n";
 
     return os.str();
 }

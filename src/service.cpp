@@ -247,80 +247,80 @@ auto with_one_shot_session(
 }  // namespace
 
 
-InitializeProbeResponse run_initialize_probe(const InitializeProbeRequest &req)
-{
-    const LaunchOptions launch = prepare_launch(req.launch);
-
-    return with_one_shot_session(
-        launch,
-        req.trace_lsp_messages,
-        req.trace_request_timing,
-        [](Session &session, const InitializeResult &initialize) {
-            (void)session;
-            InitializeProbeResponse out;
-            out.initialize = initialize;
-            return out;
-        });
-}
-
-
-DocumentSymbolsResponse run_document_symbols(const DocumentSymbolsRequest &req)
-{
-    if (req.file.empty()) {
-        throw std::runtime_error("DocumentSymbolsRequest.file must not be empty");
-    }
-
-    const LaunchOptions launch = prepare_launch(req.launch);
-    const std::filesystem::path file = normalize_abs(req.file);
-
-    return with_one_shot_session(
-        launch,
-        req.trace_lsp_messages,
-        req.trace_request_timing,
-        [&](Session &session, const InitializeResult &initialize) {
-            (void)initialize;
-
-            DocumentSymbolsResponse out;
-            out.file = file;
-            out.symbols = session.document_symbols(file);
-            return out;
-        });
-}
-
-
-ResolveAnchorResponse run_resolve_anchor(const ResolveAnchorRequest &req)
-{
-    if (req.class_name.empty()) {
-        throw std::runtime_error("ResolveAnchorRequest.class_name must not be empty");
-    }
-
-    if (req.method_name.empty()) {
-        throw std::runtime_error("ResolveAnchorRequest.method_name must not be empty");
-    }
-
-    const LaunchOptions launch = prepare_launch(req.launch);
-
-    return with_one_shot_session(
-        launch,
-        req.trace_lsp_messages,
-        req.trace_request_timing,
-        [&](Session &session, const InitializeResult &initialize) {
-            (void)initialize;
-
-            ResolveAnchorOptions options;
-            options.scope_root = launch.root_dir;
-            options.ready_timeout = req.ready_timeout;
-            options.retry_interval = req.retry_interval;
-
-            ResolveAnchorResponse out;
-            out.anchor = resolve_anchor(session,
-                                               req.class_name,
-                                               req.method_name,
-                                               options);
-            return out;
-        });
-}
-
+// InitializeProbeResponse run_initialize_probe(const InitializeProbeRequest &req)
+// {
+//     const LaunchOptions launch = prepare_launch(req.launch);
+//
+//     return with_one_shot_session(
+//         launch,
+//         req.trace_lsp_messages,
+//         req.trace_request_timing,
+//         [](Session &session, const InitializeResult &initialize) {
+//             (void)session;
+//             InitializeProbeResponse out;
+//             out.initialize = initialize;
+//             return out;
+//         });
+// }
+//
+//
+// DocumentSymbolsResponse run_document_symbols(const DocumentSymbolsRequest &req)
+// {
+//     if (req.file.empty()) {
+//         throw std::runtime_error("DocumentSymbolsRequest.file must not be empty");
+//     }
+//
+//     const LaunchOptions launch = prepare_launch(req.launch);
+//     const std::filesystem::path file = normalize_abs(req.file);
+//
+//     return with_one_shot_session(
+//         launch,
+//         req.trace_lsp_messages,
+//         req.trace_request_timing,
+//         [&](Session &session, const InitializeResult &initialize) {
+//             (void)initialize;
+//
+//             DocumentSymbolsResponse out;
+//             out.file = file;
+//             out.symbols = session.document_symbols(file);
+//             return out;
+//         });
+// }
+//
+//
+// ResolveAnchorResponse run_resolve_anchor(const ResolveAnchorRequest &req)
+// {
+//     if (req.class_name.empty()) {
+//         throw std::runtime_error("ResolveAnchorRequest.class_name must not be empty");
+//     }
+//
+//     if (req.method_name.empty()) {
+//         throw std::runtime_error("ResolveAnchorRequest.method_name must not be empty");
+//     }
+//
+//     const LaunchOptions launch = prepare_launch(req.launch);
+//
+//     return with_one_shot_session(
+//         launch,
+//         req.trace_lsp_messages,
+//         req.trace_request_timing,
+//         [&](Session &session, const InitializeResult &initialize) {
+//             (void)initialize;
+//
+//             ResolveAnchorOptions options;
+//             options.scope_root = launch.root_dir;
+//             options.ready_timeout = req.ready_timeout;
+//             options.retry_interval = req.retry_interval;
+//
+//             ResolveAnchorResponse out;
+//             out.anchor = resolve_anchor(session,
+//                                                req.class_name,
+//                                                req.method_name,
+//                                                options);
+//             return out;
+//         });
+// }
+//
 
 struct LiveSession::Impl
 {
@@ -377,71 +377,71 @@ void LiveSession::shutdown() noexcept
     }
 }
 
-InitializeProbeResponse LiveSession::initialize_probe(const InitializeProbeRequest &req)
-{
-    const LaunchOptions launch = prepare_launch(req.launch);
-
-    SessionEntry &entry = impl_->ensure_started(
-        launch,
-        req.trace_lsp_messages,
-        req.trace_request_timing);
-
-    InitializeProbeResponse out;
-    out.initialize = entry.initialize;
-    return out;
-}
-
-DocumentSymbolsResponse LiveSession::document_symbols(const DocumentSymbolsRequest &req)
-{
-    if (req.file.empty()) {
-        throw std::runtime_error("DocumentSymbolsRequest.file must not be empty");
-    }
-
-    const LaunchOptions launch = prepare_launch(req.launch);
-    const std::filesystem::path file = normalize_abs(req.file);
-
-    SessionEntry &entry = impl_->ensure_started(
-        launch,
-        req.trace_lsp_messages,
-        req.trace_request_timing);
-
-    DocumentSymbolsResponse out;
-    out.file = file;
-    out.symbols = entry.session->document_symbols(file);
-    return out;
-}
-
-ResolveAnchorResponse LiveSession::resolve_anchor(const ResolveAnchorRequest &req)
-{
-    if (req.class_name.empty()) {
-        throw std::runtime_error("ResolveAnchorRequest.class_name must not be empty");
-    }
-
-    if (req.method_name.empty()) {
-        throw std::runtime_error("ResolveAnchorRequest.method_name must not be empty");
-    }
-
-    const LaunchOptions launch = prepare_launch(req.launch);
-
-    SessionEntry &entry = impl_->ensure_started(
-        launch,
-        req.trace_lsp_messages,
-        req.trace_request_timing);
-
-    ResolveAnchorOptions options;
-    options.scope_root = launch.root_dir;
-    options.ready_timeout = req.ready_timeout;
-    options.retry_interval = req.retry_interval;
-
-    ResolveAnchorResponse out;
-    out.anchor = lspx::graph::resolve_anchor(
-        *entry.session,
-        req.class_name,
-        req.method_name,
-        options);
-    return out;
-}
-
+// InitializeProbeResponse LiveSession::initialize_probe(const InitializeProbeRequest &req)
+// {
+//     const LaunchOptions launch = prepare_launch(req.launch);
+//
+//     SessionEntry &entry = impl_->ensure_started(
+//         launch,
+//         req.trace_lsp_messages,
+//         req.trace_request_timing);
+//
+//     InitializeProbeResponse out;
+//     out.initialize = entry.initialize;
+//     return out;
+// }
+//
+// DocumentSymbolsResponse LiveSession::document_symbols(const DocumentSymbolsRequest &req)
+// {
+//     if (req.file.empty()) {
+//         throw std::runtime_error("DocumentSymbolsRequest.file must not be empty");
+//     }
+//
+//     const LaunchOptions launch = prepare_launch(req.launch);
+//     const std::filesystem::path file = normalize_abs(req.file);
+//
+//     SessionEntry &entry = impl_->ensure_started(
+//         launch,
+//         req.trace_lsp_messages,
+//         req.trace_request_timing);
+//
+//     DocumentSymbolsResponse out;
+//     out.file = file;
+//     out.symbols = entry.session->document_symbols(file);
+//     return out;
+// }
+//
+// ResolveAnchorResponse LiveSession::resolve_anchor(const ResolveAnchorRequest &req)
+// {
+//     if (req.class_name.empty()) {
+//         throw std::runtime_error("ResolveAnchorRequest.class_name must not be empty");
+//     }
+//
+//     if (req.method_name.empty()) {
+//         throw std::runtime_error("ResolveAnchorRequest.method_name must not be empty");
+//     }
+//
+//     const LaunchOptions launch = prepare_launch(req.launch);
+//
+//     SessionEntry &entry = impl_->ensure_started(
+//         launch,
+//         req.trace_lsp_messages,
+//         req.trace_request_timing);
+//
+//     ResolveAnchorOptions options;
+//     options.scope_root = launch.root_dir;
+//     options.ready_timeout = req.ready_timeout;
+//     options.retry_interval = req.retry_interval;
+//
+//     ResolveAnchorResponse out;
+//     out.anchor = lspx::graph::resolve_anchor(
+//         *entry.session,
+//         req.class_name,
+//         req.method_name,
+//         options);
+//     return out;
+// }
+//
 
 ExpandCallsResponse LiveSession::expand_calls(const ExpandCallsRequest &req)
 {
