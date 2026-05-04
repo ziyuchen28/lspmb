@@ -57,7 +57,7 @@ install-jre:
 
 
 install-jdtls: install-jre
-	@echo "==> Setting up JDTLS sandbox..."
+	@echo "==> Installing JDTLS sandbox..."
 	@mkdir -p $(TOOLS_DIR)
 	@if [ ! -x "$(TOOLS_DIR)/jdtls/bin/jdtls" ]; then \
 		set -e; \
@@ -91,6 +91,16 @@ install-mermaid:
 	else \
 		echo "==> Mermaid CLI is already installed."; \
 	fi
+
+
+install-all-javalang: install-jdtls install-mermaid
+
+
+install-all-cpplang: 
+		echo "==> c++ lsp not supported yet.";
+
+install-all-pylang:
+		echo "==> python lsp not supported yet.";
 
 
 clean:
