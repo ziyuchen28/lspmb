@@ -132,6 +132,7 @@ de-git:
 		echo "==> Stripping all Git tracking data..."; \
 		find . -name ".git" -exec rm -rf {} +; \
 		rm -rf .gitmodules; \
+	    rm -f LICENSE; \
 		echo "==> Done."; \
 	else \
 		echo "==> Aborted de-git operation."; \

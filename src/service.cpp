@@ -141,7 +141,7 @@ void validate_launch(const LaunchOptions &launch)
 }
 
 
-LaunchOptions prepare_launch(const LaunchOptions &input)
+LaunchOptions prepare_launch(const LaunchOptions &input, bool trace)
 {
     LaunchOptions launch = input;
     validate_launch(launch);
@@ -150,7 +150,31 @@ LaunchOptions prepare_launch(const LaunchOptions &input)
     launch.workspace_dir = normalize_abs(launch.workspace_dir);
     launch.jdtls_home = normalize_abs(launch.jdtls_home);
 
-    std::filesystem::create_directories(launch.workspace_dir);
+    service_trace_line(trace, "prepare_launch root=" + launch.root_dir.string());
+    service_trace_line(trace, "prepare_launch workspaceDir=" + launch.workspace_dir.string());
+    service_trace_line(trace, "prepare_launch jdtlsHome=" + launch.jdtls_home.string());
+    service_trace_line(trace, "prepare_launch javaBin=" + launch.java_bin);
+
+    std::error_code ec;
+    const bool existed_before = std::filesystem::exists(launch.workspace_dir, ec);
+    if (ec) {
+        throw std::runtime_error(
+            "failed to check workspaceDir: " + launch.workspace_dir.string() +
+            ": " + ec.message());
+    }
+
+    std::filesystem::create_directories(launch.workspace_dir, ec);
+    if (ec) {
+        throw std::runtime_error(
+            "failed to create workspaceDir: " + launch.workspace_dir.string() +
+            ": " + ec.message());
+    }
+
+    service_trace_line(
+        trace,
+        std::string("prepare_launch workspaceDir ") +
+        (existed_before ? "already exists: " : "created: ") +
+        launch.workspace_dir.string());
     return launch;
 }
 
@@ -459,7 +483,8 @@ ExpandCallsResponse LiveSession::expand_calls(const ExpandCallsRequest &req)
             "'outgoing', 'incoming', or 'both'");
     }
 
-    const LaunchOptions launch = prepare_launch(req.launch);
+    const bool trace = req.trace_lsp_messages || req.trace_request_timing;
+    const LaunchOptions launch = prepare_launch(req.launch, trace);
     auto &entry = impl_->ensure_started(
         launch,
         req.trace_lsp_messages,
